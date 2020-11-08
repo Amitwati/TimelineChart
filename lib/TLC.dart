@@ -7,6 +7,7 @@ class TimelineChart extends StatefulWidget {
   final dynamic Function(DateTime) onChange;
   final Duration minZoom;
   final Duration maxZoom;
+  final List<List<int>> busy;
 
   TimelineChart({
     Key key,
@@ -16,6 +17,7 @@ class TimelineChart extends StatefulWidget {
     this.minZoom = const Duration(seconds: 4),
     this.maxZoom = const Duration(hours: 12),
     this.onChange,
+    this.busy,
   }) : super(key: key) {
     // this.controller?.time = this.initalTime
   }
@@ -144,6 +146,7 @@ class _TimelineChartState extends State<TimelineChart> {
                   child: CustomPaint(
                     painter: Tickers(
                       range: this.winRange,
+                      busy: widget.busy,
                     ),
                   ),
                 ),
@@ -169,6 +172,7 @@ class Tickers extends CustomPainter {
   int _minMod;
   int _hourMod;
   Duration _duration;
+  List<List<int>> busy;
 
   final TextPainter textPaint = new TextPainter(
     textAlign: TextAlign.left,
@@ -190,8 +194,11 @@ class Tickers extends CustomPainter {
     ..strokeWidth = 2
     ..color = Colors.black;
 
+  Paint _rectPaint = Paint()..color = Colors.blue[200];
+
   Tickers({
     this.range,
+    this.busy,
   }) {
     _secMod = 1;
     _minMod = 1;
@@ -235,13 +242,46 @@ class Tickers extends CustomPainter {
     }
   }
 
+  paintRect(Canvas canvas, Size size, double start, double end) {
+    canvas.drawRect(Rect.fromPoints(Offset(start, size.height), Offset(end, 0)),
+        _rectPaint);
+  }
+
+  paintBusy(Canvas canvas, Size size, DateTime start, DateTime end) {
+    if (end.isBefore(range.start) || start.isAfter(range.end)) {
+      return;
+    }
+
+    if (start.isBefore(range.start)) {
+      start = range.start;
+    }
+
+    if (end.isAfter(range.end)) {
+      end = range.end;
+    }
+
+    double rectOffset = (range.start.difference(start).abs().inMilliseconds /
+        this._duration.inMilliseconds);
+    rectOffset *= size.width;
+
+    double rectEnd = (range.start.difference(end).abs().inMilliseconds /
+        this._duration.inMilliseconds);
+    rectEnd *= size.width;
+
+    paintRect(canvas, size, rectOffset, rectEnd);
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     double offsetStart;
     double realStep;
     Duration stepDuration;
-
     double step = size.width / (_duration.inMilliseconds / 1000);
+
+    for (List<int> b in (this.busy ?? [])) {
+      paintBusy(canvas, size, DateTime.fromMillisecondsSinceEpoch(b[0]),
+          DateTime.fromMillisecondsSinceEpoch(b[1]));
+    }
 
     if (_secMod != 60) {
       realStep = step;
@@ -268,9 +308,7 @@ class Tickers extends CustomPainter {
     }
 
     DateTime t = range.start;
-
     t = t.subtract(Duration(milliseconds: t.millisecond));
-
     offsetStart = offsetStart == 0 ? 1 : offsetStart;
 
     for (double i = offsetStart * realStep; i < size.width; i += realStep) {

@@ -18,6 +18,17 @@ class MyApp extends StatelessWidget {
         body: Center(
           child: TimelineChart(
             initalTime: DateTime.now(),
+            height: 75,
+            busy: [
+              [
+                DateTime(2020, 11, 8, 18, 50).millisecondsSinceEpoch,
+                DateTime(2020, 11, 8, 18, 55).millisecondsSinceEpoch,
+              ],
+              [
+                DateTime(2020, 11, 8, 12, 50).millisecondsSinceEpoch,
+                DateTime(2020, 11, 8, 18, 10).millisecondsSinceEpoch,
+              ],
+            ],
             onChange: (t) {
               print("time picked : $t");
             },
