@@ -1,16 +1,24 @@
 import 'package:flutter/material.dart';
 
 class TimelineChart extends StatefulWidget {
-  final DateTimeRange range;
   final double height;
+  final DateTime initalTime;
   final Widget Function(DateTime) titleBuilder;
+  final dynamic Function(DateTime) onChange;
+  final Duration minZoom;
+  final Duration maxZoom;
 
   TimelineChart({
     Key key,
-    @required this.range,
+    @required this.initalTime,
     this.titleBuilder,
     this.height = 100,
-  }) : super(key: key);
+    this.minZoom = const Duration(seconds: 4),
+    this.maxZoom = const Duration(hours: 12),
+    this.onChange,
+  }) : super(key: key) {
+    // this.controller?.time = this.initalTime
+  }
 
   @override
   _TimelineChartState createState() => _TimelineChartState();
@@ -27,11 +35,18 @@ class _TimelineChartState extends State<TimelineChart> {
   @override
   void initState() {
     super.initState();
-    _baseWindowSize = widget.range.start.difference(widget.range.end).abs();
+    Duration medianZoom = Duration(
+        milliseconds:
+            ((widget.minZoom + widget.maxZoom).abs().inMilliseconds / 2)
+                .ceil());
+    _baseWindowSize = medianZoom;
     this.windowSize = _baseWindowSize;
+
     winRange = DateTimeRange(
-      start: widget.range.start,
-      end: widget.range.start.add(windowSize),
+      start: widget.initalTime.subtract(
+          Duration(milliseconds: (medianZoom.inMilliseconds / 2).ceil())),
+      end: widget.initalTime
+          .add(Duration(milliseconds: (medianZoom.inMilliseconds / 2).floor())),
     );
   }
 
@@ -39,6 +54,9 @@ class _TimelineChartState extends State<TimelineChart> {
     Duration d = winRange.end.difference(winRange.start).abs();
     DateTime newT = winRange.start
         .add(Duration(milliseconds: (d.inMilliseconds / 2).floor()));
+    if (widget.onChange != null) {
+      widget.onChange(newT);
+    }
     return newT;
   }
 
@@ -79,16 +97,14 @@ class _TimelineChartState extends State<TimelineChart> {
         widget.titleBuilder != null
             ? widget.titleBuilder(getCurrentTime())
             : Text(getCurrentTime().toString()),
-        Text("START : ${this.winRange.start}"),
-        Text("END : ${this.winRange.end}"),
         GestureDetector(
           onScaleStart: (details) {
             _baseScaleFactor = _scaleFactor;
           },
           onScaleUpdate: (details) {
             if (details.scale != 1 &&
-                (!(details.scale < 1 && windowSize.inHours >= 12) &&
-                    !(details.scale > 1 && windowSize.inSeconds <= 4)))
+                (!(details.scale < 1 && windowSize >= widget.maxZoom) &&
+                    !(details.scale > 1 && windowSize <= widget.minZoom)))
               setState(() {
                 _scaleFactor = _baseScaleFactor * details.scale;
                 scaleWindow(_scaleFactor);
@@ -104,9 +120,22 @@ class _TimelineChartState extends State<TimelineChart> {
             });
           },
           child: Container(
-            color: Colors.white,
+            // color: Colors.white,
             height: widget.height,
             width: screenSize.width,
+            decoration: BoxDecoration(
+              boxShadow: [
+                const BoxShadow(
+                  color: Colors.black12,
+                ),
+                const BoxShadow(
+                  color: Colors.white,
+                  offset: Offset(2, 2),
+                  spreadRadius: -2.0,
+                  blurRadius: 10.0,
+                ),
+              ],
+            ),
             child: Stack(
               children: [
                 Container(
