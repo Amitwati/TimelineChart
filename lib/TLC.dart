@@ -79,6 +79,8 @@ class _TimelineChartState extends State<TimelineChart> {
         widget.titleBuilder != null
             ? widget.titleBuilder(getCurrentTime())
             : Text(getCurrentTime().toString()),
+        Text("START : ${this.winRange.start}"),
+        Text("END : ${this.winRange.end}"),
         GestureDetector(
           onScaleStart: (details) {
             _baseScaleFactor = _scaleFactor;
@@ -204,6 +206,94 @@ class Tickers extends CustomPainter {
     }
   }
 
+  @override
+  void paint(Canvas canvas, Size size) {
+    double offsetStart;
+    double realStep;
+    Duration stepDuration;
+
+    double step = size.width / (_duration.inMilliseconds / 1000);
+
+    if (_secMod != 60) {
+      realStep = step;
+      stepDuration = Duration(seconds: 1);
+      offsetStart = this.range.start.millisecond == 0
+          ? 0
+          : (1000 - this.range.start.millisecond) / 1000;
+    } else {
+      // no need for deconds
+      if (_minMod == 60) {
+        // no need for minutes and
+        stepDuration = Duration(hours: 1);
+        realStep = step * 3600;
+        offsetStart = this.range.start.minute == 0
+            ? 0
+            : (60 - this.range.start.minute) / 60;
+      } else {
+        realStep = step * 60;
+        stepDuration = Duration(minutes: 1);
+        offsetStart = this.range.start.second == 0
+            ? 0
+            : (60 - this.range.start.second) / 60;
+      }
+    }
+
+    DateTime t = range.start;
+
+    t = t.subtract(Duration(milliseconds: t.millisecond));
+
+    offsetStart = offsetStart == 0 ? 1 : offsetStart;
+
+    for (double i = offsetStart * realStep; i < size.width; i += realStep) {
+      t = t.add(stepDuration);
+      if (_secMod == 60 && t.second != 0) {
+        t = t.subtract(Duration(seconds: t.second));
+      }
+      if (_minMod == 60 && t.minute != 0) {
+        t = t.subtract(Duration(seconds: t.second));
+        t = t.subtract(Duration(minutes: t.minute));
+      }
+      String label =
+          toTwoDigitString(t.hour) + ":" + toTwoDigitString(t.minute);
+
+      if (t.second == 0) {
+        if (t.minute == 0) {
+          // build hour ticker
+          if (t.hour % _hourMod == 0) {
+            buildHourTicker(
+              canvas,
+              i,
+              size,
+              label,
+            );
+          }
+        } else {
+          //build minute ticker
+          {
+            if (t.minute % _minMod == 0) {
+              buildMinuteTicker(
+                canvas,
+                i,
+                size,
+                label,
+              );
+            }
+          }
+        }
+      } else {
+        // build second ticker
+        if (t.second % _secMod == 0) {
+          buildSecondTicker(
+            canvas,
+            i,
+            size,
+            label + ":" + toTwoDigitString(t.second),
+          );
+        }
+      }
+    }
+  }
+
   buildHourTicker(
     Canvas canvas,
     double distance,
@@ -289,91 +379,6 @@ class Tickers extends CustomPainter {
   toTwoDigitString(int num) {
     if (num < 10) return '0' + num.toString();
     return num.toString();
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    double step = size.width / (_duration.inMilliseconds / 1000);
-
-    double offsetStart;
-    double realStep = step;
-    Duration stepDuration = Duration(seconds: 1);
-
-    if (_secMod != 60) {
-      offsetStart = this.range.start.millisecond == 0
-          ? 0
-          : (1000 - this.range.start.millisecond) / 1000;
-    } else {
-      // no need for deconds
-      if (_minMod == 60) {
-        // no need for minutes and
-        stepDuration = Duration(hours: 1);
-        realStep = step * 3600;
-        offsetStart = this.range.start.minute == 0
-            ? 0
-            : (60 - this.range.start.minute) / 60;
-      } else {
-        realStep = step * 60;
-        stepDuration = Duration(minutes: 1);
-        offsetStart = this.range.start.second == 0
-            ? 0
-            : (60 - this.range.start.second) / 60;
-      }
-    }
-
-    DateTime t = range.start;
-
-    t = t.subtract(Duration(milliseconds: t.millisecond));
-
-    if (_secMod == 60 && t.second != 0) {
-      t = t.add(Duration(seconds: 60 - t.second));
-    }
-    if (_minMod == 60 && t.minute != 0) {
-      t = t.add(Duration(minutes: 60 - t.minute));
-    }
-
-    offsetStart = offsetStart == 0 ? 1 : offsetStart;
-    for (double i = offsetStart * realStep; i < size.width; i += realStep) {
-      String label =
-          toTwoDigitString(t.hour) + ":" + toTwoDigitString(t.minute);
-
-      if (t.second == 0) {
-        if (t.minute == 0) {
-          // build hour ticker
-          if (t.hour % _hourMod == 0) {
-            buildHourTicker(
-              canvas,
-              i,
-              size,
-              label,
-            );
-          }
-        } else {
-          //build minute ticker
-          {
-            if (t.minute % _minMod == 0) {
-              buildMinuteTicker(
-                canvas,
-                i,
-                size,
-                label,
-              );
-            }
-          }
-        }
-      } else {
-        // build second ticker
-        if (t.second % _secMod == 0) {
-          buildSecondTicker(
-            canvas,
-            i,
-            size,
-            label + ":" + toTwoDigitString(t.second),
-          );
-        }
-      }
-      t = t.add(stepDuration);
-    }
   }
 
   @override
