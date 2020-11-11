@@ -17,6 +17,9 @@ class TimelineChart extends StatefulWidget {
   final Duration maxZoom;
   final List<List<DateTime>> busy;
   final TimelineChartController controller;
+  final double secondsTickerHeight;
+  final double minutesTickerHeight;
+  final double hoursTickerHeight;
 
   TimelineChart({
     Key key,
@@ -26,6 +29,9 @@ class TimelineChart extends StatefulWidget {
     this.minZoom = const Duration(seconds: 4),
     this.maxZoom = const Duration(hours: 12),
     this.busy,
+    this.secondsTickerHeight = 10,
+    this.minutesTickerHeight = 20,
+    this.hoursTickerHeight = 30,
   }) : super(key: key);
 
   @override
@@ -136,6 +142,9 @@ class _TimelineChartState extends State<TimelineChart> {
                   child: CustomPaint(
                     painter: Tickers(
                       range: this.winRange,
+                      secondsTickerHeight: widget.secondsTickerHeight,
+                      minutesTickerHeight: widget.minutesTickerHeight,
+                      hoursTickerHeight: widget.hoursTickerHeight,
                       busy: widget.busy,
                     ),
                   ),
@@ -158,6 +167,10 @@ class _TimelineChartState extends State<TimelineChart> {
 
 class Tickers extends CustomPainter {
   final DateTimeRange range;
+  final double secondsTickerHeight;
+  final double minutesTickerHeight;
+  final double hoursTickerHeight;
+
   int _secMod;
   int _minMod;
   int _hourMod;
@@ -188,6 +201,9 @@ class Tickers extends CustomPainter {
 
   Tickers({
     this.range,
+    this.secondsTickerHeight,
+    this.minutesTickerHeight,
+    this.hoursTickerHeight,
     this.busy,
   }) {
     _secMod = 1;
@@ -366,12 +382,12 @@ class Tickers extends CustomPainter {
       canvas,
       new Offset(
         distance - (textPaint.width / 2),
-        size.height - 25 - (textPaint.width / 2),
+        size.height - this.hoursTickerHeight - (textPaint.width / 2),
       ),
     );
     canvas.drawLine(
       Offset(distance, size.height),
-      Offset(distance, size.height - 30),
+      Offset(distance, size.height - this.hoursTickerHeight),
       _hoursPaint,
     );
   }
@@ -394,12 +410,12 @@ class Tickers extends CustomPainter {
       canvas,
       new Offset(
         distance - (textPaint.width / 2),
-        size.height - 20 - (textPaint.width / 2),
+        size.height - this.minutesTickerHeight - (textPaint.width / 2),
       ),
     );
     canvas.drawLine(
       Offset(distance, size.height),
-      Offset(distance, size.height - 20),
+      Offset(distance, size.height - this.minutesTickerHeight),
       _minutesPaint,
     );
   }
@@ -422,12 +438,12 @@ class Tickers extends CustomPainter {
       canvas,
       new Offset(
         distance - (textPaint.width / 2),
-        size.height - 5 - (textPaint.width / 2),
+        size.height - this.secondsTickerHeight - (textPaint.width / 2),
       ),
     );
     canvas.drawLine(
       Offset(distance, size.height),
-      Offset(distance, size.height - 10),
+      Offset(distance, size.height - this.secondsTickerHeight),
       _secondsPaint,
     );
   }
