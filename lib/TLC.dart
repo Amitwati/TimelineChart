@@ -1,26 +1,32 @@
 import 'package:flutter/material.dart';
 
+class TimelineChartController {
+  DateTime value;
+
+  TimelineChartController({this.value}) {
+    if (this.value == null) {
+      this.value = DateTime.now();
+    }
+  }
+}
+
 class TimelineChart extends StatefulWidget {
   final double height;
-  final DateTime initalTime;
   final Widget Function(DateTime) titleBuilder;
-  final dynamic Function(DateTime) onChange;
   final Duration minZoom;
   final Duration maxZoom;
-  final List<List<int>> busy;
+  final List<List<DateTime>> busy;
+  final TimelineChartController controller;
 
   TimelineChart({
     Key key,
-    @required this.initalTime,
+    @required this.controller,
     this.titleBuilder,
     this.height = 100,
     this.minZoom = const Duration(seconds: 4),
     this.maxZoom = const Duration(hours: 12),
-    this.onChange,
     this.busy,
-  }) : super(key: key) {
-    // this.controller?.time = this.initalTime
-  }
+  }) : super(key: key);
 
   @override
   _TimelineChartState createState() => _TimelineChartState();
@@ -37,41 +43,24 @@ class _TimelineChartState extends State<TimelineChart> {
   @override
   void initState() {
     super.initState();
-    Duration medianZoom = Duration(
-        milliseconds:
-            ((widget.minZoom + widget.maxZoom).abs().inMilliseconds / 2)
-                .ceil());
-    _baseWindowSize = medianZoom;
+    _baseWindowSize = Duration(hours: 2);
     this.windowSize = _baseWindowSize;
-
-    winRange = DateTimeRange(
-      start: widget.initalTime.subtract(
-          Duration(milliseconds: (medianZoom.inMilliseconds / 2).ceil())),
-      end: widget.initalTime
-          .add(Duration(milliseconds: (medianZoom.inMilliseconds / 2).floor())),
-    );
-  }
-
-  DateTime getCurrentTime() {
-    Duration d = winRange.end.difference(winRange.start).abs();
-    DateTime newT = winRange.start
-        .add(Duration(milliseconds: (d.inMilliseconds / 2).floor()));
-    if (widget.onChange != null) {
-      widget.onChange(newT);
-    }
-    return newT;
   }
 
   @override
   Widget build(BuildContext context) {
     screenSize = MediaQuery.of(context).size;
 
+    winRange = DateTimeRange(
+      start: widget.controller.value.subtract(
+          Duration(milliseconds: (windowSize.inMilliseconds / 2).ceil())),
+      end: widget.controller.value
+          .add(Duration(milliseconds: (windowSize.inMilliseconds / 2).floor())),
+    );
+
     shiftWindow(Duration shift) {
       setState(() {
-        winRange = DateTimeRange(
-          start: winRange.start.subtract(shift),
-          end: winRange.end.subtract(shift),
-        );
+        widget.controller.value = widget.controller.value.subtract(shift);
       });
     }
 
@@ -97,8 +86,8 @@ class _TimelineChartState extends State<TimelineChart> {
       mainAxisSize: MainAxisSize.min,
       children: [
         widget.titleBuilder != null
-            ? widget.titleBuilder(getCurrentTime())
-            : Text(getCurrentTime().toString()),
+            ? widget.titleBuilder(widget.controller.value)
+            : Text(widget.controller.value.toString()),
         GestureDetector(
           onScaleStart: (details) {
             _baseScaleFactor = _scaleFactor;
@@ -114,6 +103,7 @@ class _TimelineChartState extends State<TimelineChart> {
           },
           onHorizontalDragUpdate: (details) {
             double shiftRatio = details.delta.dx / screenSize.width;
+
             Duration shift = Duration(
                 milliseconds:
                     (this.windowSize.inMilliseconds * shiftRatio).floor());
@@ -172,7 +162,7 @@ class Tickers extends CustomPainter {
   int _minMod;
   int _hourMod;
   Duration _duration;
-  List<List<int>> busy;
+  List<List<DateTime>> busy;
 
   final TextPainter textPaint = new TextPainter(
     textAlign: TextAlign.left,
@@ -278,9 +268,8 @@ class Tickers extends CustomPainter {
     Duration stepDuration;
     double step = size.width / (_duration.inMilliseconds / 1000);
 
-    for (List<int> b in (this.busy ?? [])) {
-      paintBusy(canvas, size, DateTime.fromMillisecondsSinceEpoch(b[0]),
-          DateTime.fromMillisecondsSinceEpoch(b[1]));
+    for (List<DateTime> b in (this.busy ?? [])) {
+      paintBusy(canvas, size, b[0], b[1]);
     }
 
     if (_secMod != 60) {
